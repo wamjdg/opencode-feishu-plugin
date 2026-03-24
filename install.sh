@@ -81,7 +81,26 @@ info "正在全局安装..."
 if [ "$PM" = "bun" ]; then
   (cd "$PLUGIN_DIR" && bun link)
 else
+  # 自动配置 npm global 到用户目录，免去 sudo 安装的密码交互
+  NPM_GLOBAL="$HOME/.npm-global"
+  mkdir -p "$NPM_GLOBAL"
+  npm config set prefix "$NPM_GLOBAL"
+  
   (cd "$PLUGIN_DIR" && npm install -g .)
+
+  # 检测并将 npm global 路径加入 PATH 配置
+  if [[ ":$PATH:" != *":$NPM_GLOBAL/bin:"* ]]; then
+    info "正在为您配置环境变量..."
+    RC_FILE=""
+    if [ -f "$HOME/.zshrc" ]; then RC_FILE="$HOME/.zshrc"
+    elif [ -f "$HOME/.bashrc" ]; then RC_FILE="$HOME/.bashrc"
+    elif [ -f "$HOME/.bash_profile" ]; then RC_FILE="$HOME/.bash_profile"
+    else RC_FILE="$HOME/.profile"; fi
+    
+    echo "export PATH=\"$NPM_GLOBAL/bin:\$PATH\"" >> "$RC_FILE"
+    warn "已将环境变量写入 ${BOLD}$RC_FILE${NC}"
+    warn "当前进程结束后，若使用提示 'command not found'，请先执行：${BOLD}source $RC_FILE${NC}"
+  fi
 fi
 success "全局安装完成"
 
@@ -127,8 +146,9 @@ echo -e "
 ${GREEN}${BOLD}🎉 安装完成！${NC}
 
 ${BOLD}下一步：${NC}
+  若提示 command not found，请先执行 ${CYAN}source ~/.zshrc${NC} (或对应的 profile)。
   运行 ${CYAN}opencode-feishu setup${NC} 配置飞书连接
-
+  
 ${BOLD}快速开始：${NC}
   1. ${CYAN}opencode-feishu setup${NC}   配置飞书 Webhook 或应用凭证
   2. ${CYAN}opencode-feishu test${NC}    发送测试消息验证
