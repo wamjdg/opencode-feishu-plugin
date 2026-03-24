@@ -60,22 +60,6 @@ fi
 # 进入项目目录
 PLUGIN_DIR="$TMPDIR/opencode-feishu-plugin"
 
-# ─── 安装依赖并构建 ────────────────────────────────
-info "正在安装依赖..."
-if [ "$PM" = "bun" ]; then
-  (cd "$PLUGIN_DIR" && bun install --frozen-lockfile 2>/dev/null || bun install)
-else
-  (cd "$PLUGIN_DIR" && npm install)
-fi
-
-info "正在构建..."
-if [ "$PM" = "bun" ]; then
-  (cd "$PLUGIN_DIR" && bun run build)
-else
-  (cd "$PLUGIN_DIR" && npm run build)
-fi
-success "构建完成"
-
 # ─── 全局安装 ──────────────────────────────────────
 info "正在全局安装..."
 if [ "$PM" = "bun" ]; then

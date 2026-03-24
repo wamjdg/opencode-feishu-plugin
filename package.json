@@ -34,6 +34,7 @@
     "@opencode-ai/plugin": ">=1.0.0"
   },
   "devDependencies": {
+    "@larksuiteoapi/node-sdk": "^1.59.0",
     "@opencode-ai/plugin": "^1.2.27",
     "bun-types": "^1.0.0",
     "esbuild": "^0.27.4",
@@ -43,8 +44,5 @@
     "dist",
     "README.md",
     "install.sh"
-  ],
-  "dependencies": {
-    "@larksuiteoapi/node-sdk": "^1.59.0"
-  }
+  ]
 }
