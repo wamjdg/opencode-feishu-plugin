@@ -43,5 +43,8 @@
     "dist",
     "README.md",
     "install.sh"
-  ]
+  ],
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.59.0"
+  }
 }

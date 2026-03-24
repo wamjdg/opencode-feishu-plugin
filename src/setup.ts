@@ -1,4 +1,3 @@
-
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
 import { homedir } from "os"
 import { join } from "path"
@@ -80,42 +79,22 @@ ${BOLD}╔═══════════════════════�
   const existing = loadExisting()
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 
-  // ── 飞书模式选择 ──
-  title("第 1 步：选择接入模式")
-  dim("  webhook  - 群机器人，配置最简单（推荐新手）")
-  dim("  chat_id  - 自建应用，支持私聊和更多功能")
-  const mode = await ask(rl, "选择模式 (webhook / chat_id)", existing.chat_id ? "chat_id" : "webhook")
-  const useWebhook = mode !== "chat_id"
-
   // ── 凭证 ──
-  title("第 2 步：填写飞书凭证")
+  title("第 1 步：填写飞书应用凭证")
+  info("获取凭证：open.feishu.cn → 我的应用 → 选择应用 → 凭证与基础信息")
+  const app_id     = await ask(rl, "App ID", existing.app_id ?? "")
+  const app_secret = await ask(rl, "App Secret", existing.app_secret ?? "")
 
-  let app_id     = ""
-  let app_secret = ""
-  let webhook    = ""
-  let chat_id    = ""
-
-  if (useWebhook) {
-    info("获取 Webhook：飞书群 → 设置 → 群机器人 → 添加自定义机器人 → 复制 Webhook 地址")
-    webhook = await ask(rl, "Webhook 地址", existing.webhook ?? "")
-    if (!webhook.startsWith("https://open.feishu.cn")) {
-      warn("Webhook 地址格式看起来不对，请确认是否正确")
-    }
-    // webhook 模式下 app_id/secret 可选，用于后续高级功能
-    info("还可以填写应用凭证（用于后续高级功能，可跳过）")
-    app_id     = await ask(rl, "App ID（选填，可回车跳过）", existing.app_id ?? "")
-    app_secret = app_id ? await ask(rl, "App Secret", existing.app_secret ?? "") : ""
-  } else {
-    info("获取凭证：open.feishu.cn → 我的应用 → 选择应用 → 凭证与基础信息")
-    app_id     = await ask(rl, "App ID", existing.app_id ?? "")
-    app_secret = await ask(rl, "App Secret", existing.app_secret ?? "")
-    chat_id    = await ask(rl, "Chat ID（会话 ID）", existing.chat_id ?? "")
-  }
+  // ── 默认推送目标（可选）──
+  title("第 2 步：默认推送目标（可选）")
+  dim("  用于 auto_push / push_on_complete / 手动工具推送功能")
+  dim("  如需让 AI 主动给飞书发消息，填写目标群/私聊对应的 chat_id（oc_xxx格式）")
+  const default_chat_id = await ask(rl, "默认推送 Chat ID（选填，可回车跳过）", existing.default_chat_id ?? "")
 
   // ── 行为配置 ──
   title("第 3 步：行为配置")
-  const auto_push        = await askYN(rl, "AI 每次回复自动推送到飞书？", existing.auto_push ?? false)
-  const push_on_complete = await askYN(rl, "任务完成时发飞书通知？",      existing.push_on_complete ?? true)
+  const auto_push        = await askYN(rl, "AI 每次回复自动推送到飞书（需配置默认Chat ID）？", existing.auto_push ?? false)
+  const push_on_complete = await askYN(rl, "任务完成时发飞书通知（需配置默认Chat ID）？",      existing.push_on_complete ?? true)
   const prefix           = await ask(rl, "消息前缀", existing.prefix ?? "🤖 OpenCode")
 
   rl.close()
@@ -124,11 +103,11 @@ ${BOLD}╔═══════════════════════�
   title("第 4 步：保存配置")
   mkdirSync(GLOBAL_DIR, { recursive: true })
 
-  const config: any = { auto_push, push_on_complete, prefix }
-  if (app_id)     config.app_id     = app_id
-  if (app_secret) config.app_secret = app_secret
-  if (webhook)    config.webhook    = webhook
-  if (chat_id)    config.chat_id    = chat_id
+  const config: any = {
+    app_id, app_secret,
+    auto_push, push_on_complete, prefix
+  }
+  if (default_chat_id) config.default_chat_id = default_chat_id
 
   writeFileSync(GLOBAL_CONFIG, JSON.stringify(config, null, 2), "utf-8")
   success(`配置已保存到 ${GLOBAL_CONFIG}`)
@@ -140,16 +119,17 @@ ${BOLD}╔═══════════════════════�
   print(`
 ${GREEN}${BOLD}🎉 配置完成！${RESET}
 
-${BOLD}下一步：${RESET}
-  重启 OpenCode，插件自动加载生效
+${BOLD}下一步：事件订阅配置 (必需)${RESET}
+  由于本插件采用全新的WebSocket长连接架构实现双向通信：
+  1. 打开飞书开发者后台 → 事件订阅
+  2. 启用事件订阅，订阅方式选择：${DIM}使用长连接接收事件${RESET}
+  3. 添加事件：${DIM}im.message.receive_v1${RESET}（接收消息）
+  4. 重启 OpenCode，现在你可以在飞书机器人里向 OpenCode 发送消息控制 AI 啦！
 
-${BOLD}使用方式：${RESET}
-  在 OpenCode 中说「把结果发到飞书」，AI 会自动调用插件发送
-
-${BOLD}修改配置：${RESET}
+${BOLD}命令参考：${RESET}
   ${DIM}opencode-feishu setup${RESET}   重新运行配置向导
   ${DIM}opencode-feishu show${RESET}    查看当前配置
-  ${DIM}opencode-feishu test${RESET}    发送测试消息验证配置
+  ${DIM}opencode-feishu test${RESET}    发送测试消息
 `)
 }
 
@@ -165,60 +145,36 @@ if (cmd === "show") {
   }
   const cfg = JSON.parse(readFileSync(GLOBAL_CONFIG, "utf-8"))
   if (cfg.app_secret) cfg.app_secret = cfg.app_secret.slice(0, 4) + "****"
-  if (cfg.webhook)    cfg.webhook    = cfg.webhook.slice(0, 50) + "..."
   print(JSON.stringify(cfg, null, 2))
 
 } else if (cmd === "test") {
-  // 发送测试消息
+  // 发送测试消息（需填 default_chat_id）
   title("发送测试消息")
   if (!existsSync(GLOBAL_CONFIG)) {
     warn("配置文件不存在，请先运行：opencode-feishu setup")
     process.exit(1)
   }
   const cfg = JSON.parse(readFileSync(GLOBAL_CONFIG, "utf-8"))
-  const text = `${cfg.prefix ?? "🤖 OpenCode"}\n🧪 测试消息 — 配置验证成功！\n时间：${new Date().toLocaleString("zh-CN")}`
-  try {
-    if (cfg.webhook) {
-      const res = await fetch(cfg.webhook, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ msg_type: "text", content: { text } }),
-      })
-      const data = await res.json() as any
-      if (data.code !== 0) {
-        warn(`发送失败：${data.msg}`)
-      } else {
-        success("测试消息已发送，请检查飞书群")
-      }
-    } else if (cfg.chat_id && cfg.app_id && cfg.app_secret) {
-      // chat_id 模式测试
-      const tokenRes = await fetch("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ app_id: cfg.app_id, app_secret: cfg.app_secret }),
-      })
-      const tokenData = await tokenRes.json() as any
-      if (tokenData.code !== 0) {
-        warn(`获取 Token 失败：${tokenData.msg}`)
-      } else {
-        const msgRes = await fetch("https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenData.tenant_access_token}` },
-          body: JSON.stringify({ receive_id: cfg.chat_id, msg_type: "text", content: JSON.stringify({ text }) }),
-        })
-        const msgData = await msgRes.json() as any
-        if (msgData.code !== 0) {
-          warn(`发送失败：${msgData.msg}`)
-        } else {
-          success("测试消息已发送，请检查飞书")
-        }
-      }
-    } else {
-      warn("缺少必要配置，请运行：opencode-feishu setup")
-    }
-  } catch (e: any) {
-    warn(`发送失败：${e.message}`)
+  if (!cfg.default_chat_id) {
+    warn("未配置 default_chat_id，test 命令无法发送主动测试消息")
+    process.exit(1)
   }
+  const text = `${cfg.prefix ?? "🤖 OpenCode"}\n🧪 测试消息 — 配置验证成功！\n时间：${new Date().toLocaleString("zh-CN")}`
+  
+  import("@larksuiteoapi/node-sdk").then(async (lark) => {
+    try {
+      const client = new lark.Client({ appId: cfg.app_id, appSecret: cfg.app_secret })
+      await client.im.v1.message.create({
+        params: { receive_id_type: "chat_id" },
+        data: { receive_id: cfg.default_chat_id, msg_type: "text", content: JSON.stringify({ text }) }
+      })
+      success("测试消息已发送，请检查飞书")
+    } catch(e: any) {
+      warn(`发送失败：${e.message}`)
+    }
+  }).catch((e) => {
+    warn(`测试工具加载 SDK 失败: ${e.message}`)
+  })
 
 } else {
   // 默认：运行配置向导

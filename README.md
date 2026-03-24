@@ -1,10 +1,10 @@
 # opencode-feishu-plugin
 
-OpenCode 飞书插件 — 通过飞书群机器人远程操控 OpenCode，支持结果推送、任务通知与群组协作。
+OpenCode 飞书插件 — 通过长连接与 OpenCode 双向通信，支持从飞书私聊/群聊直接操作 AI 并接收回复。
 
 ---
 
-## 🚀 一键安装
+## 🚀 安装
 
 ### 方式一：curl 一键安装（推荐）
 
@@ -12,130 +12,100 @@ OpenCode 飞书插件 — 通过飞书群机器人远程操控 OpenCode，支持
 curl -fsSL https://raw.githubusercontent.com/wamjdg/opencode-feishu-plugin/main/install.sh | bash
 ```
 
-安装完成后运行配置向导：
+安装完成后配置凭证：
 
 ```bash
 opencode-feishu setup
 ```
 
-### 方式二：bun 全局安装
-
-```bash
-bun add -g opencode-feishu-plugin
-opencode-feishu setup
-```
-
-### 方式三：npm 全局安装
-
-```bash
-npm install -g opencode-feishu-plugin
-opencode-feishu setup
-```
-
-### 方式四：从源码安装
+### 方式二：从源码安装
 
 ```bash
 git clone https://github.com/wamjdg/opencode-feishu-plugin.git
 cd opencode-feishu-plugin
-bun install && bun run build
+npm install && npm run build
 bun link
 opencode-feishu setup
 ```
 
 ---
 
-## 配置向导（无需手动编辑任何 JSON）
+## 飞书配置步骤（三步搞定双向通信）
+
+此插件基于**飞书官方长连接（WebSocket）**开发。
+**无需公网 IP，无需 ngrok 内网穿透，无需配置路由端口**，只需提供 `App ID` 和 `App Secret` 即可。
+
+### 第一步：创建飞书机器人
+
+1. 登录 [飞书开发者后台](https://open.feishu.cn) 创建自建应用
+2. 开启左侧「添加应用能力」中的 **机器人** 功能
+3. 进入「权限管理」，搜索并申请以下两个权限：
+   - `im:message:send_as_bot`（获取机器人发送单聊消息权限）
+   - `im:message.p2p_msg:readonly`（获取单聊消息读取权限）
+
+### 第二步：配置事件订阅为“长连接”
+
+1. 进入开发者后台左侧 → **事件订阅**
+2. 在页面顶部找到并勾选：**“使用长连接接收事件”**
+3. 在“添加事件”中，勾选：**`im.message.receive_v1`（接收消息事件）**
+4. 点击“创建版本”并发布你的应用。
+
+### 第三步：运行插件向导并填入凭证
+
+在终端运行以下命令：
 
 ```bash
-# 初始化配置（首次使用）
 opencode-feishu setup
-
-# 查看当前配置（敏感字段自动隐藏）
-opencode-feishu show
-
-# 发送测试消息验证配置是否正确
-opencode-feishu test
 ```
-
-运行 `setup` 后全程交互引导：
 
 ```
 ╔══════════════════════════════════════╗
 ║   opencode-feishu-plugin 配置向导    ║
 ╚══════════════════════════════════════╝
 
-第 1 步：选择接入模式
-  webhook  - 群机器人，配置最简单（推荐新手）
-  chat_id  - 自建应用，支持私聊和更多功能
-? 选择模式 (webhook / chat_id) [webhook]:
+第 1 步：填写飞书应用凭证
+ℹ️  获取凭证：open.feishu.cn → 我的应用 → 选择应用 → 凭证与基础信息
+? App ID: cli_XXXXXXXXXX
+? App Secret: XXXXXXXXXXXX
 
-第 2 步：填写飞书凭证
-? Webhook 地址: https://open.feishu.cn/open-apis/bot/v2/hook/xxx
+第 2 步：默认推送目标（可选）
+  如需让 AI 主动给飞书发消息，填写目标群/私聊对应的 chat_id（oc_xxx格式）
+? 默认推送 Chat ID:
 
 第 3 步：行为配置
 ? AI 每次回复自动推送到飞书？(y/N): n
 ? 任务完成时发飞书通知？(Y/n): y
 ? 消息前缀 [🤖 OpenCode]:
 
-✅ 配置已保存到 ~/.config/opencode/feishu.json
-✅ 插件已注册到 opencode.json
-
-🎉 配置完成！重启 OpenCode 即可生效
+✅ 配置已保存
 ```
+
+重启 OpenCode，即可在飞书里直接和机器人聊天，它会把你的指令发给电脑上的 OpenCode 执行并返回结果！
 
 ---
 
-## 注册插件
+## 使用方式
 
-`setup` 命令会自动注册，也可以手动在 `~/.config/opencode/opencode.json` 加一行：
-
-```json
-{
-  "plugin": ["opencode-feishu-plugin"]
-}
-```
+| 场景 | 操作 |
+|------|------|
+| **在飞书里控制 OpenCode** | 直接在飞书向机器人发消息 → OpenCode 自动处理 → 飞书收到回复 |
+| AI 主动推送到飞书 | 对 AI 说「把结果发到飞书」（需配置 `default_chat_id`）|
+| 任务完成通知 | 默认开启，当 OpenCode 执行完一个复杂任务时飞书提醒你 |
 
 ---
 
-## 飞书配置步骤
+## 配置文件结构
 
-### 方式一：群机器人 Webhook（推荐新手，5分钟搞定）
+配置文件始终存放在 `~/.config/opencode/feishu.json`。
 
-1. 飞书群 → 右上角「设置」→「群机器人」→「添加机器人」→「自定义机器人」
-2. 复制 Webhook 地址
-3. 运行 `opencode-feishu setup`，粘贴地址即可
-
-### 方式二：自建应用（支持私聊）
-
-1. 进入 [open.feishu.cn](https://open.feishu.cn) 创建自建应用
-2. 开启「机器人」能力，申请权限 `im:message:send_as_bot`
-3. 运行 `opencode-feishu setup` 填入 App ID 和 App Secret
-
----
-
-## 使用
-
-| 触发方式 | 效果 |
-|----------|------|
-| 对 AI 说「把结果发到飞书」 | AI 主动调用插件发送 |
-| 配置 `auto_push: true` | AI 每次回复自动同步到飞书 |
-| 配置 `push_on_complete: true` | 任务结束后飞书自动收到通知 |
-
----
-
-## 项目结构
-
-```
-opencode-feishu-plugin/
-├── src/
-│   ├── index.ts          # 插件主体（飞书 API + 工具注册）
-│   └── setup.ts          # CLI 配置向导
-├── dist/                 # 构建产物（自动生成）
-├── install.sh           # 一键安装脚本
-├── package.json
-├── tsconfig.json
-└── README.md
-```
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `app_id` | ✅ | 飞书应用 App ID |
+| `app_secret` | ✅ | 飞书应用 App Secret |
+| `default_chat_id` | ❌ | 只在使用 AI 发送工具/自动推送时才需要 |
+| `auto_push` | ❌ | 将 OpenCode 的各种输出自动推送到群里（默认 `false`） |
+| `push_on_complete`| ❌ | 任务进入 idle 状态时推送提示（默认 `true`） |
+| `prefix` | ❌ | 自定义机器人发消息时的统一前缀文本 |
 
 ---
 
