@@ -20,8 +20,7 @@ opencode-feishu setup
 
 ## 飞书配置步骤（三步搞定双向通信）
 
-此插件基于**飞书官方长连接（WebSocket）**开发。
-**无需公网 IP，无需 ngrok 内网穿透，无需配置路由端口**，只需提供 `App ID` 和 `App Secret` 即可。
+此插件基于**飞书官方长连接（WebSocket）**开发，只需提供 `App ID` 和 `App Secret` 即可。
 
 ### 第一步：创建飞书机器人
 
