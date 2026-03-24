@@ -1,0 +1,47 @@
+{
+  "name": "opencode-feishu-plugin",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "OpenCode 飞书插件 — 通过飞书群机器人远程操作 OpenCode，支持消息推送、文件收发与群组协作",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "opencode-feishu": "dist/setup.js"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "npx tsx src/index.ts",
+    "setup": "npx tsx src/setup.ts",
+    "prepublishOnly": "npm run build",
+    "postinstall": "echo '\\n✅ opencode-feishu-plugin 安装成功！\\n👉 运行 opencode-feishu setup 开始配置\\n'"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "feishu",
+    "lark",
+    "bot",
+    "飞书"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wamjdg/opencode-feishu-plugin.git"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.2.27",
+    "bun-types": "^1.0.0",
+    "esbuild": "^0.27.4",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "install.sh"
+  ]
+}
